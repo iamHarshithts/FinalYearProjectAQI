@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv
+.DS_Store
+*.sqlite3
+*.log
+.idea/
+.vscode/
+*.ipynb_checkpoints/
+aqi_env/
+env/
+node_modules/
