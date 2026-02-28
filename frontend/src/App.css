@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.1) translateY(-5px);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pop {
+  animation: pop 1.8s ease-out forwards;
+}
+
+
+@keyframes loading {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.animate-loading {
+  animation: loading 1.8s ease-in-out infinite;
+}
