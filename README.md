@@ -18,7 +18,7 @@ source env/bin/activate
 ```
 windows
 ```
-venv\Scripts\activate
+env\Scripts\activate
 ```
 **install all dependencies**
 ```
