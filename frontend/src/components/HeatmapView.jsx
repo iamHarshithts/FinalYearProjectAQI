@@ -195,7 +195,7 @@ const HeatmapView = ({ lat, lon }) => {
         setCities([...results]);
         if (i + 5 < CITIES.length) await new Promise((r) => setTimeout(r, 300));
       }
-      if (results.length === 0) setError("Could not reach backend. Is Flask running?");
+      if (results.length === 0) setError("Could not reach backend. Is Backend running?");
       setLoading(false);
     };
     load();
@@ -239,7 +239,7 @@ const HeatmapView = ({ lat, lon }) => {
       <div style={{ textAlign: "center", padding: 40 }}>
         <p style={{ fontSize: 40 }}>⚠️</p>
         <p style={{ color: "#ef4444", fontWeight: 700 }}>{error}</p>
-        <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 8 }}>Make sure your Flask backend is running at {API_BASE_URL}</p>
+        <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 8 }}>Make sure your Backend backend is running at {API_BASE_URL}</p>
       </div>
     );
   }
