@@ -3,12 +3,13 @@ from flask_cors import CORS
 import requests, joblib, os, gdown
 
 App = Flask(__name__)
-# Enable CORS for all routes to prevent browser blocking
-CORS(App, resources={r"/*": {"origins": "*"}}) 
+CORS(App, resources={r"/*": {
+    "origins": "*",
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type"]
+}})
 
 ModelPath = "model/random_forest_model.pkl"
-
-# --- Model Loading Logic ---
 if not os.path.exists(ModelPath):
     os.makedirs(os.path.dirname(ModelPath), exist_ok=True)
     gdown.download(
@@ -16,10 +17,7 @@ if not os.path.exists(ModelPath):
         ModelPath,
         quiet=False
     )
-
 Model = joblib.load(ModelPath)
-
-# --- Configuration & AQI Math ---
 Features = ['pm2_5','pm10','no','no2','nox','nh3','co','so2','o3']
 
 BREAKPOINTS = {
@@ -31,12 +29,18 @@ BREAKPOINTS = {
 }
 
 def ClassifyAqi(Aqi):
-    if Aqi <= 50: return "Good", "#00B050"
-    if Aqi <= 100: return "Satisfactory", "#92D050"
-    if Aqi <= 200: return "Moderate", "#FFFF00"
-    if Aqi <= 300: return "Poor", "#FF9900"
-    if Aqi <= 400: return "Very Poor", "#FF0000"
-    return "Severe", "#C00000"
+    if Aqi <= 50:
+        return "Good", "#047236", "Air quality is considered satisfactory, and air pollution poses little or no risk."
+    elif Aqi <= 100:
+        return "Satisfactory", "#90EE90", "Air quality is acceptable; however, there may be some concern for a small number of people."
+    elif Aqi <= 200:
+        return "Moderate", "#EFC015", "Members of sensitive groups may experience health effects. The general public is less likely to be affected."
+    elif Aqi <= 300:
+        return "Poor", "#FF9900", "Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects."
+    elif Aqi <= 400:
+        return "Very Poor", "#FF0000", "Health alert: everyone may experience more serious health effects."
+    else:
+        return "Severe", "#C00000", "Health warnings of emergency conditions. The entire population is more likely to be affected."
 
 def CalculateSubIndex(Conc, Pollutant):
     Bp = BREAKPOINTS.get(Pollutant)
@@ -47,37 +51,31 @@ def CalculateSubIndex(Conc, Pollutant):
     return 500
 
 def CalculateIndianAqi(Components):
-    # CO is often provided in ug/m3, breakpoints use mg/m3
     CoMg = Components.get('co', 0) / 1000.0
     Indices = [
-        CalculateSubIndex(Components.get('pm2_5',0),'pm2_5'),
-        CalculateSubIndex(Components.get('pm10',0),'pm10'),
-        CalculateSubIndex(Components.get('no2',0),'no2'),
-        CalculateSubIndex(Components.get('so2',0),'so2'),
-        CalculateSubIndex(CoMg,'co')
+        CalculateSubIndex(Components.get('pm2_5', 0), 'pm2_5'),
+        CalculateSubIndex(Components.get('pm10', 0), 'pm10'),
+        CalculateSubIndex(Components.get('no2', 0), 'no2'),
+        CalculateSubIndex(Components.get('so2', 0), 'so2'),
+        CalculateSubIndex(CoMg, 'co')
     ]
     return round(max(Indices), 2)
 
 def GetPollutionData(Lat, Lon):
-    # Your specific API Key
     Url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={Lat}&lon={Lon}&appid=9c9815bb312b7d2d7b1dda93051932a5"
     Resp = requests.get(Url).json()
     Data = Resp["list"][0]["components"]
-    
-    # Format list in exact order needed by the ML model
     return [
-        Data.get('pm2_5',0),
-        Data.get('pm10',0),
-        Data.get('no',0),
-        Data.get('no2',0),
-        Data.get('no',0) + Data.get('no2',0),  # NOx approx
-        Data.get('nh3',0),
-        Data.get('co',0),
-        Data.get('so2',0),
-        Data.get('o3',0)
+        Data.get('pm2_5', 0),
+        Data.get('pm10', 0),
+        Data.get('no', 0),
+        Data.get('no2', 0),
+        Data.get('no', 0) + Data.get('no2', 0),
+        Data.get('nh3', 0),
+        Data.get('co', 0),
+        Data.get('so2', 0),
+        Data.get('o3', 0)
     ]
-
-# --- Routes ---
 
 @App.route("/", methods=["GET"])
 def Home():
@@ -94,30 +92,32 @@ def Predict():
 
     Lat = request.args.get("lat")
     Lon = request.args.get("lon")
-    
+
     if not Lat or not Lon:
         return jsonify({"error": "Latitude and Longitude are required"}), 400
-        
+
     try:
         # 1. Get raw pollution data from OpenWeather
         Values = GetPollutionData(Lat, Lon)
-        
-        # 2. ML Prediction (Random Forest)
-        MlAqi = round(Model.predict([Values])[0], 2)
-        
-        # 3. Manual CPCB calculation
+
+        # 2. ML Prediction (Random Forest) - kept for reference
+        MlAqi = round(Model.predict([Values])[0], 3)
+
+        # 3. Recalculate using official CPCB breakpoints
         ComponentsDict = dict(zip(Features, Values))
-        Aqi = CalculateIndianAqi(ComponentsDict)
-        
-        # 4. Classification
-        Label, Color = ClassifyAqi(MlAqi)
+        CpcbAqi = CalculateIndianAqi(ComponentsDict)  # ✅ e.g. 20
+
+        # 4. Classify using CPCB value, NOT raw ML output
+        Label, Color, Insight = ClassifyAqi(CpcbAqi)  # ✅ 20 → Green
+
+        print(f"ML Raw: {MlAqi} | CPCB Recalculated: {CpcbAqi} | Category: {Label}")
 
         return jsonify({
-            "cpcb_aqi": Aqi,
+            "cpcb_aqi": CpcbAqi,       # ✅ recalculated CPCB value (e.g. 20         # raw model output kept for reference
             "category": Label,
             "color": Color,
+            "insight": Insight,
             "pollutants": ComponentsDict,
-           
         })
 
     except Exception as e:

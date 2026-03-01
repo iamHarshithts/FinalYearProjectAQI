@@ -1,8 +1,8 @@
-import { 
-  Wind, MapPin, Navigation, Calendar, Map as MapIcon, 
-  Activity, Info, CloudRain, AlertCircle 
+import {
+  Wind, MapPin, Navigation, Calendar, Map as MapIcon,
+  Activity, Info, CloudRain, AlertCircle
 } from 'lucide-react';
-const AQIOverview= ({ data }) => (
+const AQIOverview = ({ data }) => (
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in">
     <div className="lg:col-span-1 bg-white p-8 rounded-[2.5rem] shadow-xl border border-white relative overflow-hidden">
       <div className="absolute top-0 right-0 p-6 opacity-10"><Wind size={120} /></div>
@@ -13,7 +13,9 @@ const AQIOverview= ({ data }) => (
       </div>
       <div className="p-4 bg-slate-50 rounded-2xl">
         <p className="text-slate-500 text-xs font-bold mb-1 uppercase">Health Insight</p>
-        <p className="text-sm font-medium leading-relaxed italic">"{data.category} conditions detected. Exercise caution if in sensitive groups."</p>
+        <p className="text-sm font-medium leading-relaxed italic">
+          "{data.insight}"
+        </p>
       </div>
     </div>
 
